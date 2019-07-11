@@ -45,6 +45,19 @@ def linear(x, derivative = False):
     """
     return np.ones(x.shape) if derivative else x
 
+def tanh(x, derivative = False):
+    """
+    Implement the tanh activation function, x -> tanh(x).
+
+    INPUT:
+    x -- numpy array
+    derivative -- bool, whether the derivative should be output
+
+    OUTPUT:
+    tanh, or derivative of tanh, of x
+    """
+    return 1 - np.square(np.tanh(x)) if derivative else np.tanh(x)
+
 
 ##### COST FUNCTIONS #####
 
@@ -59,6 +72,8 @@ def cross_entropy_cost(Yhat, Y):
     OUTPUT:
     cost -- cross-entropy cost
     """
+    
+    assert Yhat.shape == Y.shape
     
     m = Y.shape[1]
     return -1. / m * np.sum(Y * np.log(Yhat) + (1. - Y) * np.log(1. - Yhat))
@@ -160,6 +175,8 @@ def forward_step(A_prev, W, b, activation):
         A = relu(Z)
     elif activation == 'linear':
         A = linear(Z)
+    elif activation == 'tanh':
+        A = tanh(Z)
         
     cache = {
         'W' : W,
@@ -230,6 +247,8 @@ def back_step(dA, cache, activation, cost_function = 'cross_entropy'):
         dAct = sigmoid(Z, derivative = True)
     elif activation == 'linear':
         dAct = linear(Z, derivative = True)
+    elif activation == 'tanh':
+        dAt = tanh(Z, derivative = True)
     
     if cost_function == 'cross_entropy':
         dZ = dA * dAct
@@ -317,14 +336,8 @@ def train_nn(X, Y, layer_dims, activations = 'default', cost_function = 'cross_e
             cost = l2_cost(AL, Y)
         costs.append(cost)
         
-        #input("Press Enter to continue...")
-
-        if i % 100 == 0:
-            print(f"Performing gradient descent... {round(i / num_iterations * 100, 2)}%" \
-                    " completed.", end = "\r")
+        print(f"Performing gradient descent... {i} iterations completed.", end = "\r")
         
-    print(f"Performing gradient descent... 100% completed.")
-    
     # plot the cost
     if plot_cost:
         plt.plot(np.squeeze(costs))
@@ -360,62 +373,3 @@ class NeuralNetwork(TransformerMixin, BaseEstimator):
         X = np.asarray(X).reshape(self.layer_dims_[0], -1)
         Yhat, _ = forward_prop(X, self.params_, self.activations_)
         return Yhat
-
-
-##### SANDBOX SPACE #####
-
-X = np.linspace(0, 1)
-X = X.reshape(1, X.size)
-
-Y = X ** 2
-Y = Y.reshape(1, Y.size)
-
-nn_model = NeuralNetwork(
-    layer_dims = [100, 100, 1], 
-    activations = ['relu', 'relu', 'sigmoid'],
-    cost_function = 'l2',
-    alpha = 0.1,
-    plot_cost = True,
-    num_iterations = 4000,
-    init_method = 'he'
-)
-
-nn_model.fit(X, Y)
-Yhat = nn_model.predict(X)
-
-plt.plot(np.squeeze(Yhat))
-plt.plot(np.squeeze(Y))
-plt.show()
-
-X = np.array([[-4, -4], [-4, 4], [4, -4], [4, 4]]).T
-y = np.array([[1], [0], [0], [1]]).T
-
-nn_model = NeuralNetwork(
-    layer_dims = [5, 1],
-    activations = ['sigmoid', 'sigmoid'], 
-    cost_function = 'cross_entropy',
-    alpha = 0.1,
-    plot_cost = True,
-    num_iterations = 4000,
-    init_method = 'he'
-)
-
-nn_model.fit(X, y)
-
-x = np.linspace(-10, 10, 200)
-y = np.linspace(-10, 10, 200)
-X, Y = np.meshgrid(x, y)
-z = np.zeros(X.shape)
-Z = np.array(z)
-for i in range(Z.shape[0]):
-    for j in range(Z.shape[1]):
-        Z[i,j] = nn_model.predict([[x[i]],[y[j]]])
-
-plt.contourf(X, Y, Z, alpha=.5, cmap='jet_r')
-C = plt.contour(X, Y, Z,  colors='black')
-plt.plot([4,-4],[4,-4],'x',color='blue')
-plt.plot([4,-4],[-4,4],'x',color='red')
-plt.axis('equal')
-plt.figtext(0.5, 0.01, 'Decision boundary of the fit for our NN.', 
-            wrap=True, horizontalalignment='center', fontsize=12)
-plt.show()
